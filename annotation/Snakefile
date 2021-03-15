@@ -1,0 +1,36 @@
+include: '../config.py'
+
+rule all:
+    input:
+        ###
+        # rat
+        ###
+        TRANSCRIPTOME_FA,
+        KALLISTO_INDEX
+
+rule get_transcriptome:
+    output:
+        TRANSCRIPTOME_FA
+    shell:
+        'curl -o "{TRANSCRIPTOME_NAME}.cdna.all.fa.gz"'
+        ' --silent'
+        ' {ENS_URL}-{ENS_V}/fasta/{SPECIES_SL}/cdna/{TRANSCRIPTOME_NAME}.cdna.all.fa.gz && '
+        ' gunzip "{TRANSCRIPTOME_NAME}.cdna.all.fa.gz" && '
+        'curl -o "{TRANSCRIPTOME_NAME}.ncrna.fa.gz"'
+        ' --silent'
+        ' {ENS_URL}-{ENS_V}/fasta/{SPECIES_SL}/ncrna/{TRANSCRIPTOME_NAME}.ncrna.fa.gz && '
+        'gunzip "{TRANSCRIPTOME_NAME}.ncrna.fa.gz" && '
+        'cat "{TRANSCRIPTOME_NAME}.cdna.all.fa" "{TRANSCRIPTOME_NAME}.ncrna.fa" > "{TRANSCRIPTOME_FA}" && '
+        'rm "{TRANSCRIPTOME_NAME}.cdna.all.fa" "{TRANSCRIPTOME_NAME}.ncrna.fa"'
+
+rule kallisto_index:
+    input:
+        TRANSCRIPTOME_FA
+    output:
+        KALLISTO_INDEX
+    shell:
+        '{UPDATED_PATH} '
+        'kallisto index'
+        ' -i "{output}"'
+        ' -k 21'
+        ' "{input}"'

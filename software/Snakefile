@@ -1,0 +1,92 @@
+include: '../config.py'
+
+rule all:
+    input:
+        KALLISTO,
+        SAMTOOLS,
+        FASTQ_DUMP,
+        'conda_config_success.txt',
+        'conda_r_pkgs_success.txt',
+        'conda_env.yml',
+        'r_pkg_install_success.txt',
+        'versions.html'
+
+rule get_versions:
+    input:
+        'r_pkg_install_success.txt'
+    output:
+        'versions.html'
+    shell:
+        source_rmd('.', 'versions.Rmd')
+
+rule conda_config:
+    output:
+        'conda_config_success.txt'
+    shell:
+        'conda config --add channels defaults; '
+        'conda config --add channels bioconda; '
+        'conda config --add channels conda-forge; '
+        'conda create -y -q --name {ENV} python=3.6'
+	'activate {ENV}'
+        'touch {output[0]}'
+
+rule get_r_pkgs:
+    input:
+        'conda_r_pkgs_success.txt'
+    output:
+        'r_pkg_install_success.txt'
+    params:
+        dir = R_DIR
+    shell:
+        'TAR=/bin/tar ' + source_r('.', 'r_pkg_install.R') + ' {params.dir}'
+
+rule get_kallisto:
+    input:        
+        'conda_config_success.txt'
+    output:
+        KALLISTO
+    shell:
+        'conda install -y -q kallisto=0.44.0'
+
+rule get_samtools:
+    input:
+        'conda_config_success.txt'
+    output:
+        SAMTOOLS
+    shell:
+        'conda install -y -q samtools'
+
+rule sra_toolkit:
+    input:
+        'conda_config_success.txt'
+    output:
+        FASTQ_DUMP
+    shell:
+        'conda install -y -q sra-tools'
+
+rule conda_r_pkgs:
+    input:
+        'conda_config_success.txt'
+    output:
+        'conda_r_pkgs_success.txt'
+    shell:
+        """
+        conda install -y -q r-devtools r-rmarkdown r-dplyr r-cowplot \
+          r-openxlsx bioconductor-deseq2 bioconductor-limma \
+          bioconductor-ruvseq r-ggridges \
+          r-base=3.5.1 r-ggplot2=3.3.0
+        touch {output[0]}
+        """
+
+rule conda_success:
+    input:
+        KALLISTO,
+        SAMTOOLS,
+        SEQTK,
+        FASTQ_DUMP,
+        'conda_config_success.txt',
+        'conda_r_pkgs_success.txt'
+    output:
+        'zfp36l2_paper.yml'
+    shell:
+        'conda env export > {output[0]}'
